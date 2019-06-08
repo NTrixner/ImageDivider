@@ -14,6 +14,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileFilter;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -44,35 +46,57 @@ public class ManualMode implements MouseListener, KeyListener {
 
     double scale = 1;
 
+    String[] inputFiles;
+
+    int fileIndex = 0;
+
+    int saved = 1;
+
     public static void main(String[] args) throws InterruptedException, IOException {
         ManualMode mode = new ManualMode();
     }
 
     public ManualMode() {
-        image_out = new Mat();
-        image_scaled = new Mat();
-        image_original = imread("input/input.jpg");
-        scale = Math.min(1, Math.min( 1000d / (double)image_original.rows(), 1000d / (double)image_original.cols()));
-        resize(image_original, image_scaled, new Size((int)(image_original.cols() * scale), (int)(image_original.rows() * scale)));
-
-        System.out.print(String.format("%d x %d, factor: %f", image_original.rows(), image_original.cols(), scale));
 
 
-        image = image_scaled.clone();
         frame = new CanvasFrame("Input");
         outFrame = new CanvasFrame("Output");
         converter = new OpenCVFrameConverter.ToMat();
-
-        update();
 
         frame.getCanvas().addMouseListener(this);
         frame.getCanvas().addKeyListener(this);
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        File inputFolder = new File("input");
+        inputFiles = inputFolder.list(new ImageFileFilter());
+        if(inputFiles.length <= 0){
+            System.exit(1);
+        }
+
+        openFile(inputFiles[0]);
     }
 
-    public void mouseClicked(MouseEvent e) {
+    public void cycleFile(){
+        fileIndex++;
+        fileIndex %= inputFiles.length;
+        openFile(inputFiles[fileIndex]);
+    }
 
+    public void openFile(String filename){
+        saved = 1;
+        clamped = -1;
+        i = 0;
+        fourGon = new Point[4];
+        image_out = new Mat();
+        image_scaled = new Mat();
+        image_original = imread("input/" + filename);
+        scale = Math.min(1, Math.min( 1000d / (double)image_original.rows(), 1000d / (double)image_original.cols()));
+        resize(image_original, image_scaled, new Size((int)(image_original.cols() * scale), (int)(image_original.rows() * scale)));
+        System.out.print(String.format("%d x %d, factor: %f", image_original.rows(), image_original.cols(), scale));
+        image = image_scaled.clone();
+        frame.setName(filename);
+        update();
     }
 
     public void mousePressed(MouseEvent e) {
@@ -114,13 +138,6 @@ public class ManualMode implements MouseListener, KeyListener {
         update();
     }
 
-    public void mouseEntered(MouseEvent e) {
-
-    }
-
-    public void mouseExited(MouseEvent e) {
-
-    }
 
     public void update() {
         image = image_scaled.clone();
@@ -157,9 +174,9 @@ public class ManualMode implements MouseListener, KeyListener {
 
         Point2f dstPoints = new Point2f(4);
         dstPoints.position(0).x(0).y(0);
-        dstPoints.position(1).x(0).y(distB);
+        dstPoints.position(1).x(distA).y(0);
         dstPoints.position(2).x(distA).y(distB);
-        dstPoints.position(3).x(distA).y(0);
+        dstPoints.position(3).x(0).y(distB);
 
         Mat h = getPerspectiveTransform(srcPoints.position(0), dstPoints.position(0));
 
@@ -171,16 +188,13 @@ public class ManualMode implements MouseListener, KeyListener {
         return image_out;
     }
 
-    public void keyTyped(KeyEvent e) {
-    }
-
     public void keyPressed(KeyEvent e) {
         if (e.getKeyChar() == 's') {
             try {
                 System.out.println("Saving file...");
-                Calendar now = Calendar.getInstance();
-                DateFormat df = SimpleDateFormat.getDateInstance();
-                String name = df.format(now.getTime()) + ".jpg";
+                DateFormat df = new SimpleDateFormat("YYYY.MM.dd_hh_mm_ss_SSS");
+                Calendar cal = Calendar.getInstance();
+                String name = inputFiles[fileIndex] + "_" + saved + "_" + df.format(cal.getTime()) + ".jpg";
                 Frame f = converter.convert(image_out);
                 Java2DFrameConverter imgConverter = new Java2DFrameConverter();
                 BufferedImage img = imgConverter.convert(f);
@@ -189,14 +203,15 @@ public class ManualMode implements MouseListener, KeyListener {
                 ImageIO.write(img, "jpg", outputFile);
                 System.out.println("Saved file: output/" + name);
 
+                saved++;
                 reset();
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         }
-    }
-
-    public void keyReleased(KeyEvent e) {
+        if(e.getKeyChar() == 'c'){
+            cycleFile();
+        }
     }
 
     public void reset(){
@@ -204,5 +219,36 @@ public class ManualMode implements MouseListener, KeyListener {
         this.i = 0;
         this.clamped = -1;
         update();
+    }
+
+    class ImageFileFilter implements FilenameFilter {
+        private final String[] okFileExtensions = new String[] { "jpg", "jpeg", "png", "gif" };
+
+        public boolean accept(File file, String filename) {
+            for (String extension : okFileExtensions) {
+                if (filename.toLowerCase().endsWith(extension)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    public void mouseEntered(MouseEvent e) {
+
+    }
+
+    public void mouseExited(MouseEvent e) {
+
+    }
+
+    public void keyTyped(KeyEvent e) {
+    }
+
+    public void keyReleased(KeyEvent e) {
+    }
+
+    public void mouseClicked(MouseEvent e) {
+
     }
 }

@@ -14,7 +14,7 @@ import static org.bytedeco.opencv.global.opencv_imgproc.*;
 import static org.bytedeco.opencv.global.opencv_calib3d.*;
 import static org.bytedeco.opencv.global.opencv_objdetect.*;
 
-public class Main {
+public class JavaCVDemo {
     public static void main(String[] args) throws Exception {
         String classifierName = null;
         if (args.length > 0) {

@@ -17,5 +17,11 @@
             <version>1.5</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>javacpp-presets-platform</artifactId>
+            <version>1.5</version>
+        </dependency>
+
     </dependencies>
 </project>
